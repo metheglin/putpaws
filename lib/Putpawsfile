@@ -1,0 +1,5 @@
+#!/usr/bin/env putpaws
+require "putpaws/setup"
+
+require "putpaws/hello"
+require "putpaws/ecs/ecs_task"

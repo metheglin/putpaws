@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require "putpaws/all"
+Putpaws::Application.new.run
