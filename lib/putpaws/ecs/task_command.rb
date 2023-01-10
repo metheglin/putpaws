@@ -4,8 +4,6 @@ module Putpaws::Ecs
   class TaskCommand
     def self.config(config)
       new(config.ecs_command_params)
-      # args = config.to_h.slice(:region, :cluster, :task_name_prefix)
-      # new(**args)
     end
 
     attr_reader :ecs_client
