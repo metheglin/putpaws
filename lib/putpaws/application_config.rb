@@ -2,7 +2,7 @@ require 'json'
 
 class Putpaws::ApplicationConfig < Struct.new(
   :name, :region, 
-  :cluster, :service, :task_name_prefix, 
+  :cluster, :service, :task_name_prefix, :ecs_region,
   :log_group_prefix, :log_region,
   keyword_init: true)
   def self.load(path_prefix: '.putpaws')
@@ -27,6 +27,15 @@ class Putpaws::ApplicationConfig < Struct.new(
     return nil unless data
     data = data.slice(*self.members)
     new(data.merge({name: name.to_s}))
+  end
+
+  def ecs_command_params
+    {
+      region: ecs_region || region,
+      cluster: cluster,
+      # service: service,
+      task_name_prefix: task_name_prefix,
+    }
   end
 
   def log_command_params

@@ -21,6 +21,7 @@ namespace :log do
     set :log_group, log_group
   end
 
+  # Check: https://github.com/aws/aws-cli/blob/v2/awscli/customizations/logs/tail.py
   desc "Tail log with follow."
   task tailf: :set_log_group do
     log_group = fetch(:log_group)
