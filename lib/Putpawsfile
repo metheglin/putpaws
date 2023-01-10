@@ -3,3 +3,4 @@ require "putpaws/setup"
 
 require "putpaws/hello"
 require "putpaws/ecs/ecs_task"
+require "putpaws/cloud_watch/log_task"

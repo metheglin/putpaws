@@ -3,7 +3,7 @@ require 'aws-sdk-ecs'
 module Putpaws::Ecs
   class TaskCommand
     def self.config(config)
-      args = config.slice(:region, :cluster, :task_name_prefix)
+      args = config.to_h.slice(:region, :cluster, :task_name_prefix)
       new(**args)
     end
 

@@ -19,4 +19,5 @@ Gem::Specification.new do |s|
   s.add_dependency "rake", "~> 13.0"
   s.add_dependency "tty-prompt", '~> 0.0'
   s.add_dependency "aws-sdk-ecs", '~> 1.0'
+  s.add_dependency "aws-sdk-cloudwatchlogs", '~> 1.0'
 end
