@@ -22,22 +22,29 @@ namespace :log do
     set :log_group, log_group
   end
 
-  # Check: https://github.com/aws/aws-cli/blob/v2/awscli/customizations/logs/tail.py
   desc "Tail log with follow."
   task tailf: :set_log_group do
+    ENV['follow'] = '1'
+    Rake::Task['log:tail'].invoke
+  end
+
+  # Check: https://github.com/aws/aws-cli/blob/v2/awscli/customizations/logs/tail.py
+  desc "Tail log with follow."
+  task tail: :set_log_group do
     log_group = fetch(:log_group)
     log_formatter = fetch(:log_formatter) {Putpaws::CloudWatch::DefaultLogFormatter.new}
     aws = Putpaws::CloudWatch::LogCommand.config(fetch(:app))
     aws.log_group = log_group.log_group_name
-    log_event_args = {start_time: (Time.now - (60*5)).to_f * 1000}
+    
+    log_event_args = Putpaws::CloudWatch::LogCommand.filter_args(since: ENV['since'], since_for: ENV['for'])
+
     loop do
-      # pp log_event_args
       events, next_args = aws.tail_log_events(**log_event_args)
-      events.each do |a|
-        puts log_formatter.call(a)
-      end
+      events.each {|a| puts log_formatter.call(a)}
       log_event_args = next_args
-      sleep 5 unless log_event_args[:next_token]
+      unless log_event_args[:next_token]
+        ENV['follow'] ? sleep(5) : break
+      end
     rescue Interrupt
       exit
     end
