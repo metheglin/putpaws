@@ -29,13 +29,13 @@ namespace :log do
   end
 
   # Check: https://github.com/aws/aws-cli/blob/v2/awscli/customizations/logs/tail.py
-  desc "Tail log with follow."
+  desc "Tail log."
   task tail: :set_log_group do
     log_group = fetch(:log_group)
     log_formatter = fetch(:log_formatter) {Putpaws::CloudWatch::DefaultLogFormatter.new}
     aws = Putpaws::CloudWatch::LogCommand.config(fetch(:app))
     aws.log_group = log_group.log_group_name
-    
+
     log_event_args = Putpaws::CloudWatch::LogCommand.filter_args(since: ENV['since'], since_for: ENV['for'])
 
     loop do
