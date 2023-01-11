@@ -1,5 +1,6 @@
 require "tty-prompt"
 require "putpaws/cloud_watch/log_command"
+require "putpaws/cloud_watch/default_log_formatter"
 
 namespace :log do
   desc "Set Log Group."
@@ -25,6 +26,7 @@ namespace :log do
   desc "Tail log with follow."
   task tailf: :set_log_group do
     log_group = fetch(:log_group)
+    log_formatter = fetch(:log_formatter) {Putpaws::CloudWatch::DefaultLogFormatter.new}
     aws = Putpaws::CloudWatch::LogCommand.config(fetch(:app))
     aws.log_group = log_group.log_group_name
     log_event_args = {start_time: (Time.now - (60*5)).to_f * 1000}
@@ -32,8 +34,7 @@ namespace :log do
       # pp log_event_args
       events, next_args = aws.tail_log_events(**log_event_args)
       events.each do |a|
-        time = Time.at(0, a.timestamp, :millisecond)
-        puts [time.strftime("%FT%T%:z"), a.message].join(" ")
+        puts log_formatter.call(a)
       end
       log_event_args = next_args
       sleep 5 unless log_event_args[:next_token]
