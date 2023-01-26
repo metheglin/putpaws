@@ -1,4 +1,5 @@
 require 'json'
+require 'pathname'
 
 class Putpaws::ApplicationConfig < Struct.new(
   :name, :region, 
