@@ -56,7 +56,7 @@ module Putpaws::Ecs
         "StartSession",
         'test',
         target_json.dump,
-        "https://ssm.ap-northeast-1.amazonaws.com"
+        "https://ssm.#{@region}.amazonaws.com"
       ]
       cmd.join(' ')
     end
