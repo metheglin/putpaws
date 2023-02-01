@@ -1,0 +1,1 @@
+load File.expand_path("../tasks/scheduler_task.rake", __FILE__)

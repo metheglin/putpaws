@@ -17,7 +17,7 @@ namespace :ecs do
     set :ecs_task, ecs_task
   end
 
-  desc "Attach on ECS task. You need to enable ECS Exec on a specified task."
+  desc "Attach on ECS task. You need to enable ECS Exec on a specified task and also install session-manager-plugin."
   task attach: :set_task do
     ecs_task = fetch(:ecs_task)
     aws = Putpaws::Ecs::TaskCommand.config(fetch(:app))

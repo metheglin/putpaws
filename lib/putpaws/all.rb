@@ -5,6 +5,7 @@ require "putpaws/version"
 require "putpaws/application"
 
 require "putpaws/application_config"
+require "putpaws/schedule_config"
 
 module Putpaws
 end

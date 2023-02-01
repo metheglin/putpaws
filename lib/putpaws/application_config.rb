@@ -1,10 +1,12 @@
 require 'json'
 require 'pathname'
+require "putpaws/schedule_config"
 
 class Putpaws::ApplicationConfig < Struct.new(
   :name, :region, 
   :cluster, :service, :task_name_prefix, :ecs_region,
   :log_group_prefix, :log_region,
+  :schedules,
   keyword_init: true)
   def self.load(path_prefix: '.putpaws')
     @application_data ||= begin
@@ -44,5 +46,9 @@ class Putpaws::ApplicationConfig < Struct.new(
       region: log_region || region,
       log_group_prefix: log_group_prefix,
     }
+  end
+
+  def schedules
+    @schedules ||= (self[:schedules] || []).map{|x| ScheduleConfig.find(x)}
   end
 end
