@@ -6,6 +6,7 @@ class Putpaws::ApplicationConfig < Struct.new(
   :name, :region, 
   :cluster, :service, :task_name_prefix, :ecs_region,
   :log_group_prefix, :log_region,
+  :build_project, :build_log_group_prefix, :build_region,
   :schedules,
   keyword_init: true)
   def self.load(path_prefix: '.putpaws')
@@ -45,6 +46,13 @@ class Putpaws::ApplicationConfig < Struct.new(
     {
       region: log_region || region,
       log_group_prefix: log_group_prefix,
+    }
+  end
+
+  def build_log_command_params
+    {
+      region: build_region || region,
+      log_group_prefix: build_log_group_prefix,
     }
   end
 

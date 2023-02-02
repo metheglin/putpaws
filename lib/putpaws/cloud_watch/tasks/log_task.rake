@@ -5,16 +5,23 @@ require "putpaws/cloud_watch/default_log_formatter"
 namespace :log do
   desc "Set Log Group."
   task :set_log_group do
-    aws = Putpaws::CloudWatch::LogCommand.config(fetch(:app))
+    app = fetch(:app)
+    prompt = TTY::Prompt.new
+    log_type = if app.build_log_group_prefix
+      prompt.select("Choose log type", ["default", "build"])
+    else
+      "default"
+    end
+    aws = Putpaws::CloudWatch::LogCommand.config(app, type: log_type)
+
     log_groups = aws.list_log_groups.map{|a| 
       [a.log_group_name, a]
     }.to_h
     raise "Log group not found on your permission" if log_groups.empty?
 
     log_group = if log_groups.length == 1
-      log_groups.first
+      log_groups.values.first
     else
-      prompt = TTY::Prompt.new
       selected = prompt.select("Choose a log_group you're going to operate", log_groups.keys)
        log_groups[selected]
     end

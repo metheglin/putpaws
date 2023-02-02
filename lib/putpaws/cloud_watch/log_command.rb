@@ -10,8 +10,12 @@ module Putpaws::CloudWatch
       'w' => 60 * 60 * 24 * 7,
     }
 
-    def self.config(config)
-      new(config.log_command_params)
+    def self.config(config, type: "default")
+      if type == "build"
+        new(config.build_log_command_params)
+      else
+        new(config.log_command_params)
+      end
     end
 
     def self.parse_unit_time(ut)
