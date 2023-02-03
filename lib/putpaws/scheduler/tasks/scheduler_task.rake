@@ -6,9 +6,10 @@ namespace :scheduler do
   desc "Select Schedule to Manage."
   task :set_schedule_config do
     app = fetch(:app)
-    schedules = (app.schedules && !app.schedules.empty?) ? app.schedules : Putpaws::ScheduleConfig.all
+    schedules = (app.schedules && !app.schedules.empty?) ? app.schedules : []
     if schedules.empty?
-      raise "Please set schedules at .putpaws/schedule.json"
+      schedule_options = Putpaws::ScheduleConfig.all.map(&:name)
+      raise "Please set `schedules` at .putpaws/schedule.json\nFollowing schedules available:\n#{schedule_options.to_json}\n"
     end
 
     prompt = TTY::Prompt.new
@@ -21,7 +22,7 @@ namespace :scheduler do
   desc "Deploy schedule."
   task deploy: :set_schedule_config do
     schedule_config = fetch(:schedule_config)
-    pp schedule_config
+    # pp schedule_config
     aws = Putpaws::Scheduler::ScheduleCommand.new(schedule_config)
     aws.deploy!
   end
