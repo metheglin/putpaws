@@ -40,7 +40,7 @@ module Putpaws::Ecs
         task: ecs_task.task_arn,
       })
 
-      ssm_region = ENV['AWS_REGION_SSM'].presence || @region
+      ssm_region = ENV['AWS_REGION_SSM'] || @region
       
       # https://github.com/aws/aws-cli/blob/2a6136010d8656a605d41d1e7b5fdab3c2930cad/awscli/customizations/ecs/executecommand.py#L105
       session_json = {
