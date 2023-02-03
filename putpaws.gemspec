@@ -17,8 +17,8 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = ">= 2.7"
   s.add_dependency "rake", "~> 13.0"
-  s.add_dependency "tty-prompt", '~> 0.0'
-  s.add_dependency "aws-sdk-ecs", '~> 1.0'
-  s.add_dependency "aws-sdk-cloudwatchlogs", '~> 1.0'
-  s.add_dependency "aws-sdk-scheduler", '~> 1.0'
+  s.add_dependency "tty-prompt"
+  s.add_dependency "aws-sdk-ecs"
+  s.add_dependency "aws-sdk-cloudwatchlogs"
+  s.add_dependency "aws-sdk-scheduler"
 end
