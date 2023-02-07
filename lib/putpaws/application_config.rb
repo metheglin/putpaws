@@ -57,6 +57,6 @@ class Putpaws::ApplicationConfig < Struct.new(
   end
 
   def schedules
-    @schedules ||= (self[:schedules] || []).map{|x| Putpaws::ScheduleConfig.find(x)}
+    @schedules ||= (self[:schedules] || []).map{|x| Putpaws::ScheduleConfig.find(x)}.compact
   end
 end
