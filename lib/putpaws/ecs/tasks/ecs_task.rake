@@ -1,4 +1,4 @@
-require "tty-prompt"
+require "putpaws/prompt"
 require "putpaws/ecs/task_command"
 
 namespace :ecs do
@@ -10,7 +10,7 @@ namespace :ecs do
       task_def = t.task_definition_arn.split('/').last
       ["#{task_id} (#{task_def}) #{t.last_status}", t]
     }.to_h
-    prompt = TTY::Prompt.new
+    prompt = Putpaws::Prompt.safe
     selected = prompt.select("Choose a task you're going to operate", ecs_tasks.keys)
     ecs_task = ecs_tasks[selected]
 

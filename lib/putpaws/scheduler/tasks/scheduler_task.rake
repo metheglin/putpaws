@@ -1,4 +1,4 @@
-require "tty-prompt"
+require "putpaws/prompt"
 require "putpaws/schedule_config"
 require "putpaws/scheduler/schedule_command"
 
@@ -12,7 +12,7 @@ namespace :scheduler do
       raise "Please set `schedules` at .putpaws/schedule.json\nFollowing schedules available:\n#{schedule_options.to_json}\n"
     end
 
-    prompt = TTY::Prompt.new
+    prompt = Putpaws::Prompt.safe
     selected = prompt.select("Choose a task you're going to operate", schedules.map(&:name))
     schedule_config = schedules.find{|x| x.name == selected}
 

@@ -1,4 +1,4 @@
-require "tty-prompt"
+require "putpaws/prompt"
 require "putpaws/cloud_watch/log_command"
 require "putpaws/cloud_watch/default_log_formatter"
 
@@ -6,7 +6,7 @@ namespace :log do
   desc "Set Log Group."
   task :set_log_group do
     app = fetch(:app)
-    prompt = TTY::Prompt.new
+    prompt = Putpaws::Prompt.safe
     log_type = if app.build_log_group_prefix
       prompt.select("Choose log type", ["default", "build"])
     else
