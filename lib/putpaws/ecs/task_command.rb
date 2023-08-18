@@ -3,7 +3,7 @@ require 'aws-sdk-ecs'
 module Putpaws::Ecs
   class TaskCommand
     def self.config(config)
-      new(config.ecs_command_params)
+      new(**config.ecs_command_params)
     end
 
     attr_reader :ecs_client

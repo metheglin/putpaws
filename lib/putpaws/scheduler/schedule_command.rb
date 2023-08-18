@@ -3,7 +3,7 @@ require 'aws-sdk-scheduler'
 module Putpaws::Scheduler
   class ScheduleCommand
     def self.config(config)
-      new(config.log_command_params)
+      new(**config.log_command_params)
     end
 
     attr_reader :client

@@ -12,9 +12,9 @@ module Putpaws::CloudWatch
 
     def self.config(config, type: "default")
       if type == "build"
-        new(config.build_log_command_params)
+        new(**config.build_log_command_params)
       else
-        new(config.log_command_params)
+        new(**config.log_command_params)
       end
     end
 
