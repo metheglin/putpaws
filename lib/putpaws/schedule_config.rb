@@ -9,7 +9,7 @@ class Putpaws::ScheduleConfig < Struct.new(
   def self.load(path_prefix: '.putpaws')
     @schedule_data ||= begin
       path = Pathname.new(path_prefix).join("schedule.json").to_s
-      data = File.exists?(path) ?
+      data = File.exist?(path) ?
         JSON.parse(File.read(path), symbolize_names: true).to_h :
         {}
     end
