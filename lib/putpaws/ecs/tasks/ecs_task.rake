@@ -22,7 +22,28 @@ namespace :ecs do
     ecs_task = fetch(:ecs_task)
     aws = Putpaws::Ecs::TaskCommand.config(fetch(:app))
     aws.ecs_task = ecs_task
-    cmd = aws.get_attach_command
+    cmd = aws.get_attach_command(container: ENV['container'])
+    puts cmd
+    system(cmd)
+  end
+
+  desc "Run port forwarding session. You need to enable ECS Exec on a specified task and also install session-manager-plugin."
+  task forward: :set_task do
+    ecs_task = fetch(:ecs_task)
+    aws = Putpaws::Ecs::TaskCommand.config(fetch(:app))
+    aws.ecs_task = ecs_task
+
+    remote_host, remote_port = (ENV['remote'] || '').split(':').map(&:strip)
+    _, local_port = (ENV['local'] || '').split(':').map(&:strip)
+    if remote_host.nil? or remote_port.nil?
+      raise "Remote Host, Port is required: (Ex) remote=192.168.1.1:80"
+    end
+    cmd = aws.get_port_forwarding_command(
+      container: ENV['container'],
+      remote_host: remote_host,
+      remote_port: remote_port,
+      local_port: local_port
+    )
     puts cmd
     system(cmd)
   end

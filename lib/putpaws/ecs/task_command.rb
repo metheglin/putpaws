@@ -1,4 +1,5 @@
 require 'aws-sdk-ecs'
+require 'aws-sdk-ssm'
 
 module Putpaws::Ecs
   class TaskCommand
@@ -27,11 +28,35 @@ module Putpaws::Ecs
       }
     end
 
-    def get_attach_command(container: 'app')
+    def get_session_target(container: 'app')
       raise "ECS Task Not Set" unless ecs_task
       ctn = ecs_task.containers.detect{|c| c.name == container}
       task_id = ecs_task.task_arn.split('/').last
       raise "Container: #{container} not found" unless ctn
+      "ecs:#{cluster}_#{task_id}_#{ctn.runtime_id}"
+    end
+
+    def get_port_forwarding_command(container: nil, remote_port:, remote_host:, local_port: nil)
+      container ||= 'app'
+      target = get_session_target(container: container)
+      ssm_client = Aws::SSM::Client.new({region: region})
+      local_port ||= (1050..1079).map(&:to_s).shuffle.first
+      puts "Starting to use local port: #{local_port}"
+      res = ssm_client.start_session({
+        target: target,
+        document_name: "AWS-StartPortForwardingSessionToRemoteHost",
+        parameters: {
+          portNumber: [remote_port],
+          localPortNumber: [local_port],
+          host: [remote_host]
+        }
+      })
+      build_session_manager_plugin_command(session: res, target: target)
+    end
+
+    def get_attach_command(container: nil)
+      container ||= 'app'
+      target = get_session_target(container: container)
       res = ecs_client.execute_command({
         cluster: cluster,
         container: container,
@@ -39,17 +64,26 @@ module Putpaws::Ecs
         interactive: true,
         task: ecs_task.task_arn,
       })
+      build_session_manager_plugin_command(session: res.session, target: target)
+    end
 
+    def build_session_manager_plugin_command(session:, target:)
       ssm_region = ENV['AWS_REGION_SSM'] || @region
-      
+
       # https://github.com/aws/aws-cli/blob/2a6136010d8656a605d41d1e7b5fdab3c2930cad/awscli/customizations/ecs/executecommand.py#L105
-      session_json = {
-        "SessionId" => res.session.session_id,
-        "StreamUrl" => res.session.stream_url,
-        "TokenValue" => res.session.token_value,
-      }.to_json
+      session_json = if session.respond_to?(:session_id)
+        {
+          "SessionId" => session.session_id,
+          "StreamUrl" => session.stream_url,
+          "TokenValue" => session.token_value,
+        }.to_json
+      elsif session.is_a?(Hash)
+        session.to_json
+      else
+        session
+      end
       target_json = {
-        "Target" => "ecs:#{cluster}_#{task_id}_#{ctn.runtime_id}"
+        "Target" => target
       }.to_json
       cmd = [
         "session-manager-plugin",
