@@ -21,7 +21,7 @@ bundle exec putpaws awesome-api-staging ecs:forward container=app remote=example
 mysql -u awesome_user -p --port 1050 -h 127.0.0.1
 ```
 
-## CloudWatch Logs
+### CloudWatch Logs
 
 `tail -f`
 
@@ -64,7 +64,8 @@ gem 'putpaws'
     "task_name_prefix": "awesome-api",
     "log_group_prefix": "/ecs/awesome/awesome-api-staging",
     "log_region": null,
-    "build_log_group_prefix": "/aws/codebuild/awesome-api-staging"
+    "build_log_group_prefix": "/aws/codebuild/awesome-api-staging",
+    "build_project_name_prefix": "awesome-api-staging"
   },
   "awesome-api-production": {
     "region": "ap-northeast-1",

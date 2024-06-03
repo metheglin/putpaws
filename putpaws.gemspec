@@ -22,4 +22,5 @@ Gem::Specification.new do |s|
   s.add_dependency "aws-sdk-ecs"
   s.add_dependency "aws-sdk-cloudwatchlogs"
   s.add_dependency "aws-sdk-scheduler"
+  s.add_dependency "aws-sdk-codebuild"
 end

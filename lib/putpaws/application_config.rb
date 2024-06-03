@@ -6,7 +6,7 @@ class Putpaws::ApplicationConfig < Struct.new(
   :name, :region, 
   :cluster, :service, :task_name_prefix, :ecs_region,
   :log_group_prefix, :log_region,
-  :build_project, :build_log_group_prefix, :build_region,
+  :build_project_name_prefix, :build_log_group_prefix, :build_region,
   :schedules,
   keyword_init: true)
   def self.load(path_prefix: '.putpaws')
@@ -58,5 +58,12 @@ class Putpaws::ApplicationConfig < Struct.new(
 
   def schedules
     @schedules ||= (self[:schedules] || []).map{|x| Putpaws::ScheduleConfig.find(x)}.compact
+  end
+
+  def codebuild_command_params
+    {
+      region: build_region || region,
+      project_name_prefix: build_project_name_prefix,
+    }
   end
 end
