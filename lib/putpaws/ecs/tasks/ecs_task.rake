@@ -1,3 +1,4 @@
+require "shellwords"
 require "putpaws/prompt"
 require "putpaws/ecs/task_command"
 require "putpaws/ecs/run_command"
@@ -30,8 +31,8 @@ namespace :ecs do
     aws = Putpaws::Ecs::TaskCommand.config(fetch(:app))
     aws.ecs_task = ecs_task
     cmd = aws.get_attach_command(container: ENV['container'])
-    puts cmd
-    system(cmd)
+    puts Shellwords.join(cmd)
+    system(*cmd)
   end
 
   desc "Run port forwarding session. You need to enable ECS Exec on a specified task and also install session-manager-plugin."
@@ -51,8 +52,8 @@ namespace :ecs do
       remote_port: remote_port,
       local_port: local_port
     )
-    puts cmd
-    system(cmd)
+    puts Shellwords.join(cmd)
+    system(*cmd)
   end
 
   desc "Run a command on a temporary ECS task. The task terminates itself when the command finishes. (Ex) cmd='bundle exec rake db:migrate' wait=true"
@@ -110,8 +111,8 @@ namespace :ecs do
       )
       aws.ecs_task = ecs_task
       cmd = aws.get_attach_command(container: ENV['container'] || runner.container_name)
-      puts cmd
-      system(cmd)
+      puts Shellwords.join(cmd)
+      system(*cmd)
     ensure
       if ENV['keep']
         puts "Task #{task_id} keeps running and terminates itself within #{ttl} seconds."

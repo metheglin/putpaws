@@ -68,10 +68,12 @@ module Putpaws::Ecs
       build_session_manager_plugin_command(session: res.session, target: target)
     end
 
+    # Returns an argument array so that callers can spawn session-manager-plugin
+    # without a shell like `system(*cmd)`.
+    # https://github.com/aws/aws-cli/blob/2a6136010d8656a605d41d1e7b5fdab3c2930cad/awscli/customizations/ecs/executecommand.py#L105
     def build_session_manager_plugin_command(session:, target:)
       ssm_region = ENV['AWS_REGION_SSM'] || @region
 
-      # https://github.com/aws/aws-cli/blob/2a6136010d8656a605d41d1e7b5fdab3c2930cad/awscli/customizations/ecs/executecommand.py#L105
       session_json = if session.respond_to?(:session_id)
         {
           "SessionId" => session.session_id,
@@ -86,16 +88,15 @@ module Putpaws::Ecs
       target_json = {
         "Target" => target
       }.to_json
-      cmd = [
+      [
         "session-manager-plugin",
-        session_json.dump,
+        session_json,
         @region,
         "StartSession",
-        'test',
-        target_json.dump,
+        ENV['AWS_PROFILE'].to_s,
+        target_json,
         "https://ssm.#{ssm_region}.amazonaws.com"
       ]
-      cmd.join(' ')
     end
   end
 end
