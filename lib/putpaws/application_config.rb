@@ -1,13 +1,16 @@
 require 'json'
 require 'pathname'
 require "putpaws/schedule_config"
+require "putpaws/infra_network_config"
+require "putpaws/infra_target_config"
 
 class Putpaws::ApplicationConfig < Struct.new(
-  :name, :region, 
+  :name, :region,
   :cluster, :service, :task_name_prefix, :ecs_region,
   :log_group_prefix, :log_region,
   :build_project_name_prefix, :build_log_group_prefix, :build_region,
   :schedules,
+  :network, :target,
   keyword_init: true)
   def self.load(path_prefix: '.putpaws')
     @application_data ||= begin
@@ -58,6 +61,16 @@ class Putpaws::ApplicationConfig < Struct.new(
 
   def schedules
     @schedules ||= (self[:schedules] || []).map{|x| Putpaws::ScheduleConfig.find(x)}.compact
+  end
+
+  def network
+    return nil unless self[:network]
+    @network ||= Putpaws::InfraNetworkConfig.find(self[:network])
+  end
+
+  def target
+    return nil unless self[:target]
+    @target ||= Putpaws::InfraTargetConfig.find(self[:target])
   end
 
   def codebuild_command_params
