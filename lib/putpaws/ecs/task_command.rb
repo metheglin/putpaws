@@ -1,3 +1,4 @@
+require 'socket'
 require 'aws-sdk-ecs'
 require 'aws-sdk-ssm'
 
@@ -37,11 +38,31 @@ module Putpaws::Ecs
       "ecs:#{cluster}_#{task_id}_#{ctn.runtime_id}"
     end
 
+    def local_port_available?(port)
+      TCPServer.new('127.0.0.1', port.to_i).close
+      true
+    rescue Errno::EADDRINUSE, Errno::EACCES
+      false
+    end
+
+    def resolve_local_port(local_port)
+      if local_port
+        unless local_port_available?(local_port)
+          raise "Local port #{local_port} is already in use"
+        end
+        local_port.to_s
+      else
+        port = (1050..1079).to_a.shuffle.detect{|p| local_port_available?(p)}
+        raise "No available local port between 1050 and 1079. Please specify one like: local=:8080" unless port
+        port.to_s
+      end
+    end
+
     def get_port_forwarding_command(container: nil, remote_port:, remote_host:, local_port: nil)
       container ||= 'app'
       target = get_session_target(container: container)
       ssm_client = Aws::SSM::Client.new({region: region})
-      local_port ||= (1050..1079).map(&:to_s).shuffle.first
+      local_port = resolve_local_port(local_port)
       puts "Starting to use local port: #{local_port}"
       res = ssm_client.start_session({
         target: target,
