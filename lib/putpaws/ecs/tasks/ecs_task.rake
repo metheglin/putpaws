@@ -13,6 +13,10 @@ namespace :ecs do
       label += " [#{t.group}]" unless t.group.to_s.start_with?('family:')
       [label, t]
     }.to_h
+    if ecs_tasks.empty?
+      raise "No running ECS tasks found on cluster: #{aws.cluster}" +
+        (aws.task_name_prefix ? " (task_name_prefix: #{aws.task_name_prefix})" : "")
+    end
     prompt = Putpaws::Prompt.safe
     selected = prompt.select("Choose a task you're going to operate", ecs_tasks.keys)
     ecs_task = ecs_tasks[selected]

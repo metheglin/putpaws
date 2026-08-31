@@ -20,6 +20,7 @@ module Putpaws::Ecs
 
     def list_ecs_tasks
       res = ecs_client.list_tasks(cluster: cluster)
+      return [] if res.task_arns.empty?
       res = ecs_client.describe_tasks(tasks: res.task_arns, cluster: cluster)
       return res.tasks unless task_name_prefix
       res.tasks.select{|t| 
