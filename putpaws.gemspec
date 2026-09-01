@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.description  = "aws fargate based infra management"
   s.authors      = ["metheglin"]
   s.email        = "pigmybank@gmail.com"
-  s.files        = Dir["{lib}/**/*.rb", "{lib}/**/*.rake", "bin/*", "LICENSE", "*.md", "lib/Putpawsfile"]
+  s.files        = Dir["{lib}/**/*.rb", "{lib}/**/*.rake", "{lib}/**/*.json", "{lib}/**/*.erb", "bin/*", "LICENSE", "*.md", "lib/Putpawsfile"]
   s.homepage     = "https://rubygems.org/gems/putpaws"
   s.executables  = %w(putpaws)
   s.require_path = 'lib'
@@ -20,6 +20,8 @@ Gem::Specification.new do |s|
   s.add_dependency "tty-prompt"
   s.add_dependency "aws-sdk-ssm"
   s.add_dependency "aws-sdk-ecs"
+  s.add_dependency "aws-sdk-ec2"
+  s.add_dependency "aws-sdk-iam"
   s.add_dependency "aws-sdk-cloudwatchlogs"
   s.add_dependency "aws-sdk-scheduler"
   s.add_dependency "aws-sdk-codebuild"

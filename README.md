@@ -1,5 +1,61 @@
 # Put your paws up!!
 
+## Provisioning
+
+Build service infra (security group / ECS cluster / task definitions / service / log groups / CodeBuild) idempotently.
+Deletion is out of scope on purpose: putpaws only creates and updates.
+
+```
+# Interview basic infra (existing VPC / ECR / SES / S3 / SSM parameter prefix)
+# and generate provision.json + IAM role drafts
+bundle exec putpaws ready
+
+# After reviewing/editing the drafts under policies/, create the IAM roles
+# from them as-is and fill their ARNs into provision.json. Idempotent:
+# edit a draft and run again to update the role.
+bundle exec putpaws steady
+
+# Dry-run: show what would be created / updated / skipped
+bundle exec putpaws ahead
+
+# Build the rest as far as possible. `up` stops with instructions where a manual
+# step is required. Fix things by hand, then just run `up` again. Safe to re-run any time.
+bundle exec putpaws up
+```
+
+Running `steady` is your explicit confirmation of the drafts: `up` never touches IAM
+and stops until the role ARNs are filled. Filling in an existing role ARN in
+provision.json instead makes `steady` leave that role alone
+(useful when IAM is managed by another team).
+
+Files live under `.putpaws/provisioning/`:
+
+- `provisioning/{service_name}/provision.json` ... inputs (edit by hand; `steady` fills the role ARNs)
+- `provisioning/{service_name}/state.json` ... created resource info (written by putpaws)
+- `provisioning/{service_name}/policies/` ... IAM role drafts to review, applied as-is by `putpaws steady`
+- `provisioning/presets/{preset}/` ... defaults and task definition templates (copied here on `ready`, edit freely)
+
+Presets are searched in this order: project local (`.putpaws/provisioning/presets/`),
+user global (directories in `PUTPAWS_PRESETS_PATH`, then `~/.putpaws/presets/`), and the ones bundled in the gem.
+Whichever you pick on `ready` is copied into the project so the project owns its snapshot.
+
+Security groups are either specified (one or more existing ones; putpaws never touches their rules)
+or a new one is created for the service when left empty on `ready`.
+
+When the service step completes, the new service is reflected into
+`.putpaws/application.json` and `.putpaws/infra.json` (diff is shown and confirmed),
+so `ecs:attach`, `ecs:shell`, `ecs:run` and `log:*` work immediately.
+Secrets are handled by reference only: task definitions point to existing
+SSM parameters (Ex: `/{service_name}/RAILS_MASTER_KEY`) and putpaws never touches the values.
+
+A scheduler role is always created too, and the `target` entry of infra.json carries it,
+so `scheduler:deploy` works any time by just writing `.putpaws/schedule.json`.
+
+CodeBuild is created as CI: builds run inside the VPC with the same subnets and
+security group as the service, so `db:migrate` against RDS works from the build.
+Note that the private subnets need a NAT gateway (or VPC endpoints) so that
+builds can reach GitHub / ECR / CloudWatch Logs.
+
 ## Example
 
 ### ECS

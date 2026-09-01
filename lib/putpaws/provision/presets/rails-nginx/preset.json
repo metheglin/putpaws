@@ -1,0 +1,32 @@
+{
+  "defaults": {
+    "cpu": "256",
+    "memory": "512",
+    "desired_count": 1,
+    "container_port": 3000,
+    "log_retention_days": 30,
+    "image_tag": "latest",
+    "nginx_image": "public.ecr.aws/nginx/nginx:stable",
+    "assign_public_ip": "DISABLED",
+    "env": {
+      "RAILS_ENV": "production",
+      "RACK_ENV": "production",
+      "RAILS_LOG_TO_STDOUT": "1"
+    },
+    "secrets": {
+      "RAILS_MASTER_KEY": "{ssm_parameter_prefix}/RAILS_MASTER_KEY"
+    }
+  },
+  "task_definitions": [
+    { "suffix": "app", "template": "taskdef-app.json.erb", "container_name": "app" },
+    { "suffix": "web", "template": "taskdef-web.json.erb", "container_name": "app" }
+  ],
+  "service_task_definition": "app",
+  "devops_defaults": {
+    "source_type": "GITHUB",
+    "environment_image": "aws/codebuild/standard:7.0",
+    "compute_type": "BUILD_GENERAL1_SMALL",
+    "privileged_mode": true,
+    "buildspec": "buildspec.yml"
+  }
+}
