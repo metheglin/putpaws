@@ -56,6 +56,30 @@ security group as the service, so `db:migrate` against RDS works from the build.
 Note that the private subnets need a NAT gateway (or VPC endpoints) so that
 builds can reach GitHub / ECR / CloudWatch Logs.
 
+## Operator permissions
+
+Declare named operator profiles in `.putpaws/operators.json` (generated with examples on first run),
+then resolve them into managed policies per service, idempotently
+(CREATE / UPDATE as a new policy version / SKIP — re-running never piles up policies):
+
+```
+bundle exec putpaws awesome-api-staging iam:grant profile=developer
+```
+
+```
+{
+  "developer": { "groups": ["attach", "shell", "deploy", "logs", "codebuild"] },
+  "viewer": { "groups": ["logs"] }
+}
+```
+
+Groups map to putpaws command namespaces: `attach` (ecs:attach/forward), `shell` (ecs:shell/run —
+note this implies reading all secrets of the service), `deploy` (ecs:deploy), `logs` (log:*),
+`codebuild` (code_build:build), `scheduler` (scheduler:deploy).
+`extra_statements` on a profile appends raw IAM statements.
+The policy is named `{service}-operator-{profile}`. Attaching it to users/groups is left to your admin
+(an attach command example is printed).
+
 ## Example
 
 ### ECS
