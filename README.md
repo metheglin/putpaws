@@ -1,4 +1,14 @@
-# Put your paws up!!
+# Put your pAWS up!!
+
+## Command names
+
+The short commands follow a "put your paws ..." image:
+
+- `putpaws ready` ... put paws ready: — place your paws and prepare
+- `putpaws steady` ... put paws steady: — hold steady, right before the start
+- `putpaws up` ... put paws up: — everything is ready, raise them up
+- `putpaws ahead` ... put paws ahead: — reach ahead and probe (dry-run)
+- `putpaws away` ... put paws away: — take your paws off and let AI take over
 
 ## Provisioning
 
@@ -80,7 +90,26 @@ note this implies reading all secrets of the service), `deploy` (ecs:deploy), `l
 The policy is named `{service}-operator-{profile}`. Attaching it to users/groups is left to your admin
 (an attach command example is printed).
 
+## AI setup
+
+`putpaws away` installs a guide for AI agents (Claude Code etc.) into the project:
+`.claude/skills/putpaws/SKILL.md` (commands, read-only vs mutating classification,
+non-interactive recipes, suggested permission allowlist) and a pointer block in
+`CLAUDE.md` (or `AGENTS.md` when there is no CLAUDE.md). Re-run it after updating putpaws.
+
+```
+bundle exec putpaws away
+```
+
 ## Example
+
+### Info
+
+Show resolved settings for a service without touching AWS
+
+```
+bundle exec putpaws awesome-api-staging info
+```
 
 ### ECS
 
