@@ -40,7 +40,7 @@ class Putpaws::ApplicationConfig < Struct.new(
     {
       region: ecs_region || region,
       cluster: cluster,
-      # service: service,
+      service: service,
       task_name_prefix: task_name_prefix,
     }
   end

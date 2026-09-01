@@ -77,6 +77,16 @@ bundle exec putpaws awesome-api-staging ecs:forward container=app remote=example
 mysql -u awesome_user -p --port 1050 -h 127.0.0.1
 ```
 
+Redeploy the service (update-service with force new deployment).
+With a mutable image tag like `latest`, this rolls out the newly pushed image.
+
+```
+bundle exec putpaws awesome-api-staging ecs:deploy
+
+# Optionally change desired count / task definition, and wait until stable
+bundle exec putpaws awesome-api-staging ecs:deploy desired=2 taskdef=awesome-api-staging-web wait=true
+```
+
 Run a command on a temporary task. The task terminates itself when the command finishes.
 
 ```

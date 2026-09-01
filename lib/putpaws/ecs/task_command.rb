@@ -9,12 +9,13 @@ module Putpaws::Ecs
     end
 
     attr_reader :ecs_client
-    attr_reader :region, :cluster, :task_name_prefix
+    attr_reader :region, :cluster, :service, :task_name_prefix
     attr_accessor :ecs_task
-    def initialize(region:, cluster:, task_name_prefix: nil)
+    def initialize(region:, cluster:, service: nil, task_name_prefix: nil)
       @ecs_client = Aws::ECS::Client.new({region: region})
       @region = region
       @cluster = cluster
+      @service = service
       @task_name_prefix = task_name_prefix
       @ecs_task = nil
     end
@@ -28,6 +29,36 @@ module Putpaws::Ecs
         _, name = t.task_definition_arn.split('task-definition/')
         name.start_with?(task_name_prefix)
       }
+    end
+
+    def list_ecs_services
+      res = ecs_client.list_services(cluster: cluster, max_results: 100)
+      return [] if res.service_arns.empty?
+      res = ecs_client.describe_services(cluster: cluster, services: res.service_arns)
+      services = res.services.select{|s| s.status == 'ACTIVE'}
+      return services unless task_name_prefix
+      filtered = services.select{|s| s.service_name.start_with?(task_name_prefix)}
+      filtered.empty? ? services : filtered
+    end
+
+    def update_ecs_service(service:, desired_count: nil, task_definition: nil)
+      params = {
+        cluster: cluster,
+        service: service,
+        force_new_deployment: true,
+      }
+      params[:desired_count] = desired_count.to_i if desired_count
+      params[:task_definition] = task_definition if task_definition
+      res = ecs_client.update_service(**params)
+      res.service
+    end
+
+    def wait_ecs_service_stable(service:, timeout: 600)
+      ecs_client.wait_until(
+        :services_stable,
+        {cluster: cluster, services: [service]},
+        {delay: 15, max_attempts: (timeout / 15.0).ceil}
+      )
     end
 
     def get_session_target(container: 'app')

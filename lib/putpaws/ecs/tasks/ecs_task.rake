@@ -87,6 +87,38 @@ namespace :ecs do
     end
   end
 
+  desc "Update ECS service with force new deployment (redeploy). (Ex) desired=2 taskdef=my-family wait=true"
+  task :deploy do
+    aws = Putpaws::Ecs::TaskCommand.config(fetch(:app))
+    service_name = aws.service
+    if service_name.nil?
+      services = aws.list_ecs_services
+      raise "No ECS services found on cluster: #{aws.cluster}" if services.empty?
+      service_name = if services.one?
+        services.first.service_name
+      else
+        prompt = Putpaws::Prompt.safe
+        prompt.select("Choose a service to update", services.map(&:service_name))
+      end
+    end
+
+    svc = aws.update_ecs_service(
+      service: service_name,
+      desired_count: ENV['desired'],
+      task_definition: ENV['taskdef']
+    )
+    task_def = svc.task_definition.to_s.split('/').last
+    puts "Deployment started: service=#{svc.service_name} task_definition=#{task_def} desired_count=#{svc.desired_count}"
+
+    if ENV['wait']
+      puts "Waiting for the service to be stable..."
+      aws.wait_ecs_service_stable(service: service_name)
+      puts "Service is stable."
+    else
+      puts "Check progress with: bundle exec putpaws #{fetch(:app).name} log:tailf"
+    end
+  end
+
   desc "Launch a temporary ECS task for operation and attach to it. The task terminates itself when ttl passes (default 30m). (Ex) ttl=45m keep=true"
   task :shell do
     runner = Putpaws::Ecs::RunCommand.config(fetch(:app))
