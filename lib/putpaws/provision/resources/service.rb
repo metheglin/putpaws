@@ -25,6 +25,9 @@ module Putpaws
         def current
           res = clients.ecs.describe_services(cluster: config.cluster_name, services: [name])
           res.services.detect{|s| s.status == 'ACTIVE'}
+        rescue Aws::ECS::Errors::ClusterNotFoundException
+          # cluster not created yet (Ex: `ahead` on a fresh setup) -> no service either
+          nil
         end
 
         def changed?(current)
