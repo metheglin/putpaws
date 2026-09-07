@@ -65,7 +65,7 @@ module Putpaws
           version_id: policy.default_version_id
         )
         JSON.parse(URI.decode_www_form_component(ver.policy_version.document))
-      rescue Aws::IAM::Errors::NoSuchEntityException
+      rescue Aws::IAM::Errors::NoSuchEntity, Aws::IAM::Errors::NoSuchEntityException
         nil
       end
 

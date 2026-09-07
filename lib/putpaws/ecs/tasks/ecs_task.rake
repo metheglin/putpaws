@@ -56,7 +56,7 @@ namespace :ecs do
     system(*cmd)
   end
 
-  desc "Run a command on a temporary ECS task. The task terminates itself when the command finishes. (Ex) cmd='bundle exec rake db:migrate' wait=true"
+  desc "Run a command on a temporary ECS task. The task terminates itself when the command finishes. (Ex) cmd='bundle exec rake db:migrate' wait=true cpu=1024 memory=2048"
   task :run do
     runner = Putpaws::Ecs::RunCommand.config(fetch(:app))
     command = ENV['cmd']
@@ -68,7 +68,9 @@ namespace :ecs do
       command: command,
       started_by: 'putpaws-run',
       group: 'putpaws-run',
-      container: ENV['container']
+      container: ENV['container'],
+      cpu: ENV['cpu'],
+      memory: ENV['memory']
     )
     task_id = ecs_task.task_arn.split('/').last
     puts "Task started: #{task_id} [putpaws-run]"
@@ -119,7 +121,7 @@ namespace :ecs do
     end
   end
 
-  desc "Launch a temporary ECS task for operation and attach to it. The task terminates itself when ttl passes (default 30m). (Ex) ttl=45m keep=true"
+  desc "Launch a temporary ECS task for operation and attach to it. The task terminates itself when ttl passes (default 30m). (Ex) ttl=45m keep=true cpu=256 memory=512"
   task :shell do
     runner = Putpaws::Ecs::RunCommand.config(fetch(:app))
     ttl = Putpaws::Ecs::RunCommand.parse_ttl(ENV['ttl'])
@@ -128,7 +130,9 @@ namespace :ecs do
     ecs_task = runner.run_ecs_task(
       command: "sleep #{ttl}",
       started_by: 'putpaws-shell',
-      group: 'putpaws-shell'
+      group: 'putpaws-shell',
+      cpu: ENV['cpu'],
+      memory: ENV['memory']
     )
     task_id = ecs_task.task_arn.split('/').last
     puts "Task started: #{task_id} [putpaws-shell]"

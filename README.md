@@ -147,6 +147,10 @@ bundle exec putpaws awesome-api-staging ecs:run cmd='bundle exec rake db:migrate
 
 # Pass wait=true to wait until the task stops and check the exit code
 bundle exec putpaws awesome-api-staging ecs:run cmd='bundle exec rake db:migrate' wait=true
+
+# Override the task size for this launch only (must be a valid Fargate combination).
+# Also available on ecs:shell.
+bundle exec putpaws awesome-api-staging ecs:run cmd='bundle exec rake heavy:job' cpu=1024 memory=2048 wait=true
 ```
 
 Launch a temporary task for operation and attach to it (like SSH-ing into the environment).

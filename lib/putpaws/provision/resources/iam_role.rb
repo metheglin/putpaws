@@ -43,7 +43,7 @@ module Putpaws
 
         def current
           clients.iam.get_role(role_name: name).role
-        rescue Aws::IAM::Errors::NoSuchEntityException
+        rescue Aws::IAM::Errors::NoSuchEntity, Aws::IAM::Errors::NoSuchEntityException
           nil
         end
 

@@ -50,7 +50,20 @@ module Putpaws::Ecs
     # Launch a temporary task whose main process is overridden with the given
     # command, so that the task terminates itself when the command finishes.
     # started_by and group are set so that temporary tasks are identifiable.
-    def run_ecs_task(command:, started_by:, group:, container: nil)
+    # cpu/memory override the task-level size for this launch only
+    # (must be a valid Fargate combination).
+    def run_ecs_task(command:, started_by:, group:, container: nil, cpu: nil, memory: nil)
+      overrides = {
+        container_overrides: [
+          {
+            name: container || container_name,
+            command: ['/bin/sh', '-c', command],
+          }
+        ]
+      }
+      overrides[:cpu] = cpu.to_s unless cpu.to_s.strip.empty?
+      overrides[:memory] = memory.to_s unless memory.to_s.strip.empty?
+
       res = ecs_client.run_task({
         cluster: target.cluster,
         task_definition: target.task_definition,
@@ -66,14 +79,7 @@ module Putpaws::Ecs
             assign_public_ip: network.assign_public_ip,
           }
         },
-        overrides: {
-          container_overrides: [
-            {
-              name: container || container_name,
-              command: ['/bin/sh', '-c', command],
-            }
-          ]
-        },
+        overrides: overrides,
       })
       failure = res.failures.first
       raise "Failed to run task: #{failure.reason} #{failure.detail}" if failure
