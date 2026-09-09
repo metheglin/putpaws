@@ -61,6 +61,14 @@ SSM parameters (Ex: `/{service_name}/RAILS_MASTER_KEY`) and putpaws never touche
 A scheduler role is always created too, and the `target` entry of infra.json carries it,
 so `scheduler:deploy` works any time by just writing `.putpaws/schedule.json`.
 
+The CPU architecture is declared once as `cpu_architecture` (`ARM64` / `X86_64`) in the preset
+defaults (overridable per service via `overrides`), and applied consistently to both
+task definitions (`runtimePlatform`) and CodeBuild (environment type and image).
+The bundled preset defaults to `ARM64`; projects whose copied preset predates this setting
+fall back to `X86_64` so nothing changes silently. When switching an existing service to ARM,
+run the CI build right after `up` so an ARM image exists before tasks roll
+(`devops.environment_type` / `environment_image` can override the derivation for staged migration).
+
 CodeBuild is created as CI: builds run inside the VPC with the same subnets and
 security group as the service, so `db:migrate` against RDS works from the build.
 Note that the private subnets need a NAT gateway (or VPC endpoints) so that

@@ -2,6 +2,10 @@
   "family": "<%= service_name %>-web",
   "requiresCompatibilities": ["FARGATE"],
   "networkMode": "awsvpc",
+  "runtimePlatform": {
+    "cpuArchitecture": "<%= cpu_architecture %>",
+    "operatingSystemFamily": "LINUX"
+  },
   "cpu": "<%= cpu %>",
   "memory": "<%= memory %>",
   "executionRoleArn": "<%= execution_role_arn %>",

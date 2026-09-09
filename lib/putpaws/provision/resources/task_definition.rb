@@ -11,7 +11,8 @@ module Putpaws
         # Variables exposed to taskdef ERB templates.
         class TemplateContext
           attr_reader :service_name, :region, :account_id,
-            :cpu, :memory, :container_port, :image, :nginx_image,
+            :cpu, :memory, :container_port, :cpu_architecture,
+            :image, :nginx_image,
             :log_group, :execution_role_arn, :task_role_arn,
             :env_json, :secrets_json
 
@@ -23,6 +24,7 @@ module Putpaws
             @cpu = settings[:cpu].to_s
             @memory = settings[:memory].to_s
             @container_port = (settings[:container_port] || 3000).to_i
+            @cpu_architecture = config.cpu_architecture
             @image = config.ecr_image_uri
             @nginx_image = settings[:nginx_image] || 'public.ecr.aws/nginx/nginx:stable'
             @log_group = config.log_group

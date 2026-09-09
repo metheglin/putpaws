@@ -92,6 +92,20 @@ module Putpaws
         preset.devops_defaults.merge(devops.reject{|_, v| v.nil?})
       end
 
+      CPU_ARCHITECTURES = %w[X86_64 ARM64]
+
+      # Single source of truth for the CPU architecture, applied to both
+      # task definitions (runtimePlatform) and CodeBuild (environment type/image).
+      # Falls back to X86_64 when unspecified so that existing projects
+      # (whose copied presets/templates predate this setting) keep working.
+      def cpu_architecture
+        arch = (settings[:cpu_architecture] || 'X86_64').to_s
+        unless CPU_ARCHITECTURES.include?(arch)
+          raise "Invalid cpu_architecture: #{arch} (available: #{CPU_ARCHITECTURES.join(', ')})"
+        end
+        arch
+      end
+
       def account_id
         Util.arn_account_id(base[:ecr_repository_arn])
       end

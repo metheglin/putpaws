@@ -1,5 +1,6 @@
 {
   "defaults": {
+    "cpu_architecture": "ARM64",
     "cpu": "256",
     "memory": "512",
     "desired_count": 1,
@@ -24,7 +25,10 @@
   "service_task_definition": "app",
   "devops_defaults": {
     "source_type": "GITHUB",
-    "environment_image": "aws/codebuild/standard:7.0",
+    "environment_images": {
+      "ARM64": "aws/codebuild/amazonlinux-aarch64-standard:3.0",
+      "X86_64": "aws/codebuild/standard:7.0"
+    },
     "compute_type": "BUILD_GENERAL1_SMALL",
     "privileged_mode": true,
     "buildspec": "buildspec.yml"

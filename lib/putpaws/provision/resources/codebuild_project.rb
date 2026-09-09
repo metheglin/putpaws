@@ -5,12 +5,33 @@ module Putpaws
   module Provision
     module Resources
       class CodebuildProject < Base
+        # Derived from cpu_architecture; devops.environment_type / environment_image
+        # override the derivation (useful for staged arch migration).
+        ENVIRONMENT_TYPES = {
+          'ARM64' => 'ARM_CONTAINER',
+          'X86_64' => 'LINUX_CONTAINER',
+        }
+        DEFAULT_IMAGES = {
+          'ARM64' => 'aws/codebuild/amazonlinux-aarch64-standard:3.0',
+          'X86_64' => 'aws/codebuild/standard:7.0',
+        }
+
         def name
           config.build_project_name
         end
 
         def devops
           config.devops_settings
+        end
+
+        def environment_type
+          devops[:environment_type] || ENVIRONMENT_TYPES.fetch(config.cpu_architecture)
+        end
+
+        def environment_image
+          devops[:environment_image] ||
+            (devops[:environment_images] || {})[config.cpu_architecture.to_sym] ||
+            DEFAULT_IMAGES.fetch(config.cpu_architecture)
         end
 
         def security_group_ids
@@ -30,8 +51,8 @@ module Putpaws
             },
             artifacts: {type: 'NO_ARTIFACTS'},
             environment: {
-              type: 'LINUX_CONTAINER',
-              image: devops[:environment_image] || 'aws/codebuild/standard:7.0',
+              type: environment_type,
+              image: environment_image,
               compute_type: devops[:compute_type] || 'BUILD_GENERAL1_SMALL',
               privileged_mode: devops.fetch(:privileged_mode, true),
             },
@@ -60,6 +81,7 @@ module Putpaws
             current.source&.location != desired_params[:source][:location] ||
             current.source&.buildspec != desired_params[:source][:buildspec] ||
             current.service_role != desired_params[:service_role] ||
+            current.environment&.type != desired_params[:environment][:type] ||
             current.environment&.image != desired_params[:environment][:image] ||
             current.environment&.compute_type != desired_params[:environment][:compute_type] ||
             current.vpc_config&.subnets.to_a.sort != desired_params[:vpc_config][:subnets].sort ||
