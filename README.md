@@ -182,6 +182,15 @@ so you can identify them on the AWS console and on the task list of `ecs:attach`
 `ecs:run` and `ecs:shell` require `network` and `target` in `.putpaws/application.json`,
 which refer to the `network` / `target` sections of `.putpaws/infra.json` (the same ones used by scheduler).
 
+### CodeBuild
+
+Start the CI build. By default it is fire-and-forget; pass `wait=true` to wait
+until the build completes (phases are printed) and exit non-zero on failure.
+
+```
+bundle exec putpaws awesome-api-staging code_build:build branch=main wait=true
+```
+
 ### CloudWatch Logs
 
 `tail -f`

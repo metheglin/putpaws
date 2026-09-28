@@ -41,6 +41,23 @@ module Putpaws::CodeBuild
       codebuild_client.start_build(**params)
     end
 
+    def wait_until_build_complete(build_id, timeout: 3600, interval: 10)
+      deadline = Time.now + timeout
+      last_phase = nil
+      loop do
+        res = codebuild_client.batch_get_builds(ids: [build_id])
+        build = res.builds.first
+        raise "Build not found: #{build_id}" unless build
+        if build.current_phase != last_phase
+          last_phase = build.current_phase
+          puts "  phase: #{last_phase}"
+        end
+        return build if build.build_status != 'IN_PROGRESS'
+        raise "Timed out waiting for build to complete: #{build_id}" if Time.now > deadline
+        sleep interval
+      end
+    end
+
     def build_source_version(type:, version:)
       type = type.to_sym
       if type == :branch

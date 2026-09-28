@@ -15,7 +15,7 @@ namespace :code_build do
     set :codebuild_project, codebuild_project
   end
 
-  desc "Start build."
+  desc "Start build. Pass wait=true to wait until the build completes and fail on error. (Ex) branch=main wait=true"
   task build: :set_project do
     aws = Putpaws::CodeBuild::ProjectCommand.config(fetch(:app))
 
@@ -30,10 +30,22 @@ namespace :code_build do
     end
     codebuild_project = fetch(:codebuild_project)
     aws.codebuild_project = codebuild_project
-    aws.start_build_with_specific_version(
-      source_version: source_version, 
-      environment_variables: ENV['env'] ? JSON.parse(ENV['env']) : {}, 
+    res = aws.start_build_with_specific_version(
+      source_version: source_version,
+      environment_variables: ENV['env'] ? JSON.parse(ENV['env']) : {},
       buildspec_override: ENV['buildspec']
     )
+    build = res.build
+    puts "Build started: #{build.id}"
+
+    if ENV['wait']
+      puts "Waiting for the build to complete..."
+      build = aws.wait_until_build_complete(build.id)
+      if build.build_status == 'SUCCEEDED'
+        puts "Build succeeded: #{build.id}"
+      else
+        raise "Build #{build.build_status.downcase}: #{build.id}"
+      end
+    end
   end
 end
