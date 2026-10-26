@@ -55,6 +55,14 @@ or a new one is created for the service when left empty on `ready`.
 When the service step completes, the new service is reflected into
 `.putpaws/application.json` and `.putpaws/infra.json` (diff is shown and confirmed),
 so `ecs:attach`, `ecs:shell`, `ecs:run` and `log:*` work immediately.
+One entry is written per task definition of the preset, keyed by the task definition
+family `{service_name}-{suffix}` (Ex: `awesome-api-staging-app` / `awesome-api-staging-web`),
+each pointing at the `infra.target` of the same name. Only the entry of the preset's
+`service_task_definition` carries `service` (for `ecs:deploy` / `ecs:attach`); the others have
+`service: null` and are meant for one-off tasks (`ecs:run` / `ecs:shell` / scheduler),
+so `db:migrate` keeps running on the plain `app` task definition even when the service
+runs `web` (nginx + app). `infra.network` is written once as `{service_name}`.
+Existing keys are never deleted; remove stale ones by hand.
 Secrets are handled by reference only: task definitions point to existing
 SSM parameters (Ex: `/{service_name}/RAILS_MASTER_KEY`) and putpaws never touches the values.
 
@@ -225,19 +233,35 @@ gem 'putpaws'
 
 `.putpaws/application.json`
 
+Keys are free-form names you pass to the CLI. The ones written by `putpaws up` follow
+`{service_name}-{suffix}`: `-app` for one-off tasks (`service: null`), `-web` for the
+long-running service.
+
 ```
 {
-  "awesome-api-staging": {
+  "awesome-api-staging-app": {
     "region": "ap-northeast-1",
     "cluster": "cluster-staging",
     "service": null,
-    "task_name_prefix": "awesome-api",
-    "log_group_prefix": "/ecs/awesome/awesome-api-staging",
+    "task_name_prefix": "awesome-api-staging-app",
+    "log_group_prefix": "/ecs/awesome-api-staging",
     "log_region": null,
     "build_log_group_prefix": "/aws/codebuild/awesome-api-staging",
     "build_project_name_prefix": "awesome-api-staging",
-    "network": "awesome-private-staging",
-    "target": "awesome-staging"
+    "network": "awesome-api-staging",
+    "target": "awesome-api-staging-app"
+  },
+  "awesome-api-staging-web": {
+    "region": "ap-northeast-1",
+    "cluster": "cluster-staging",
+    "service": "awesome-api-staging",
+    "task_name_prefix": "awesome-api-staging-web",
+    "log_group_prefix": "/ecs/awesome-api-staging",
+    "log_region": null,
+    "build_log_group_prefix": "/aws/codebuild/awesome-api-staging",
+    "build_project_name_prefix": "awesome-api-staging",
+    "network": "awesome-api-staging",
+    "target": "awesome-api-staging-web"
   },
   "awesome-api-production": {
     "region": "ap-northeast-1",

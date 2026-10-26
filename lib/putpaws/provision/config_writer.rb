@@ -8,6 +8,15 @@ module Putpaws
     # Reflects provisioned resources into .putpaws/application.json and
     # .putpaws/infra.json. Only the keys of the target service are touched.
     # Shows a diff and asks for confirmation before writing.
+    #
+    # One application entry and one infra.target entry are written per task
+    # definition of the preset, keyed by the task definition family
+    # (`<service_name>-<suffix>`). The entry whose suffix is the preset's
+    # `service_task_definition` carries `service` so that ecs:deploy /
+    # ecs:attach address the long-running service; the others are for
+    # one-off tasks (ecs:run / ecs:shell / scheduler) and have `service: null`.
+    # infra.network is written once per service as it does not depend on the
+    # task definition.
     class ConfigWriter
       attr_reader :config, :state, :prompt, :io
       def initialize(config:, state:, prompt:, io: $stdout)
@@ -17,17 +26,18 @@ module Putpaws
         @io = io
       end
 
-      def application_entry
+      def application_entry(entry)
+        family = config.task_definition_family(entry[:suffix])
         {
           region: config.region,
           cluster: config.cluster_name,
-          service: config.service_name,
-          task_name_prefix: config.service_name,
+          service: service_entry?(entry) ? config.service_name : nil,
+          task_name_prefix: family,
           log_group_prefix: config.log_group,
           build_log_group_prefix: config.build_log_group,
           build_project_name_prefix: config.build_project_name,
           network: config.service_name,
-          target: config.service_name,
+          target: family,
         }
       end
 
@@ -39,24 +49,31 @@ module Putpaws
         }
       end
 
-      def target_entry
+      def target_entry(entry)
         {
           # Used by EventBridge Scheduler (scheduler:deploy).
           scheduler_role: config.roles[:scheduler_role_arn],
           cluster: state.resources[:cluster_arn],
           # Revision-less on purpose: always run the latest ACTIVE revision.
-          task_definition: config.service_task_definition_family,
-          container_name: config.service_container_name,
+          task_definition: config.task_definition_family(entry[:suffix]),
+          container_name: entry[:container_name] || 'app',
         }
       end
 
       def apply!
-        write_key(path('application.json'), [config.service_name.to_sym], application_entry)
         write_key(path('infra.json'), [:network, config.service_name.to_sym], network_entry)
-        write_key(path('infra.json'), [:target, config.service_name.to_sym], target_entry)
+        config.preset.task_definitions.each do |entry|
+          key = config.task_definition_family(entry[:suffix]).to_sym
+          write_key(path('application.json'), [key], application_entry(entry))
+          write_key(path('infra.json'), [:target, key], target_entry(entry))
+        end
       end
 
       private
+
+      def service_entry?(entry)
+        entry[:suffix] == config.preset.service_task_definition
+      end
 
       def path(basename)
         Pathname.new(config.path_prefix).join(basename)
