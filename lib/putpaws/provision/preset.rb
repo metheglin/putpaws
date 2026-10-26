@@ -6,6 +6,8 @@ module Putpaws
   module Provision
     class Preset
       BUILTIN_DIR = File.expand_path('presets', __dir__)
+      # Preselected on `ready`: Rails 8 with Thruster, app container only.
+      DEFAULT = 'rails'
 
       def self.local_dir(path_prefix: '.putpaws')
         Pathname.new(path_prefix).join('provisioning', 'presets')

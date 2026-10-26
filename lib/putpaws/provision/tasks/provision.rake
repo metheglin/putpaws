@@ -22,8 +22,10 @@ namespace :provision do
     end
 
     region = prompt.ask("Region:", default: 'ap-northeast-1')
-    preset_choices = Putpaws::Provision::Preset.catalog.map{|e| ["#{e[:name]} (#{e[:source]})", e[:name]]}.to_h
-    preset_name = prompt.select("Preset:", preset_choices)
+    preset_catalog = Putpaws::Provision::Preset.catalog
+    preset_choices = preset_catalog.map{|e| ["#{e[:name]} (#{e[:source]})", e[:name]]}.to_h
+    preset_default = (preset_catalog.index{|e| e[:name] == Putpaws::Provision::Preset::DEFAULT} || 0) + 1
+    preset_name = prompt.select("Preset:", preset_choices, default: preset_default)
 
     puts "--- Basic infra (existing resources; used to generate IAM policies) ---"
     vpc_id = prompt.ask("VPC ID:"){|q| q.required(true)}

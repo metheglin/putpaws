@@ -49,6 +49,26 @@ Presets are searched in this order: project local (`.putpaws/provisioning/preset
 user global (directories in `PUTPAWS_PRESETS_PATH`, then `~/.putpaws/presets/`), and the ones bundled in the gem.
 Whichever you pick on `ready` is copied into the project so the project owns its snapshot.
 
+Bundled presets (ECS Fargate, `awsvpc`):
+
+- `rails` (default) ... one `app` container on port 8080. Assumes the Rails 8 default Dockerfile,
+  where [Thruster](https://github.com/basecamp/thruster) fronts Puma and does what an nginx sidecar used to
+  (HTTP/2, asset caching / compression, X-Sendfile); TLS terminates at the ALB.
+  Thruster listens on port 80 by default, but the Rails Dockerfile runs as a non-root user and
+  Fargate does not let non-root processes bind ports below 1024 (unlike local Docker, which sets
+  `net.ipv4.ip_unprivileged_port_start=0`), so the preset sets `HTTP_PORT=8080` and
+  `container_port: 8080`; point the ALB target group at 8080. The Dockerfile needs no change
+  (`EXPOSE 80` is metadata only). Older Rails apps work too by adding the `thruster` gem and
+  starting with `bin/thrust bin/rails server`, or by setting `container_port` to the Puma port
+  and dropping `HTTP_PORT`.
+- `rails-nginx` ... same `app` task definition plus a `web` one with an nginx sidecar on port 80.
+  The sidecar is a stock nginx image with no proxy config, so point `nginx_image` at your own image
+  that proxies to `localhost:3000`. Keep this only when you need something Thruster does not do
+  (maintenance pages, custom rewrites, proxy-level auth).
+
+Need another task definition (Ex: a batch worker)? Add an entry to `task_definitions` of the
+copied preset with its own template; `up` creates it and writes an `application.json` entry for it.
+
 Security groups are either specified (one or more existing ones; putpaws never touches their rules)
 or a new one is created for the service when left empty on `ready`.
 
@@ -60,8 +80,8 @@ family `{service_name}-{suffix}` (Ex: `awesome-api-staging-app` / `awesome-api-s
 each pointing at the `infra.target` of the same name. Only the entry of the preset's
 `service_task_definition` carries `service` (for `ecs:deploy` / `ecs:attach`); the others have
 `service: null` and are meant for one-off tasks (`ecs:run` / `ecs:shell` / scheduler),
-so `db:migrate` keeps running on the plain `app` task definition even when the service
-runs `web` (nginx + app). `infra.network` is written once as `{service_name}`.
+so with `rails-nginx` `db:migrate` keeps running on the plain `app` task definition while the
+service runs `web` (nginx + app). `infra.network` is written once as `{service_name}`.
 Existing keys are never deleted; remove stale ones by hand.
 Secrets are handled by reference only: task definitions point to existing
 SSM parameters (Ex: `/{service_name}/RAILS_MASTER_KEY`) and putpaws never touches the values.
@@ -72,7 +92,7 @@ so `scheduler:deploy` works any time by just writing `.putpaws/schedule.json`.
 The CPU architecture is declared once as `cpu_architecture` (`ARM64` / `X86_64`) in the preset
 defaults (overridable per service via `overrides`), and applied consistently to both
 task definitions (`runtimePlatform`) and CodeBuild (environment type and image).
-The bundled preset defaults to `ARM64`; projects whose copied preset predates this setting
+The bundled presets default to `ARM64`; projects whose copied preset predates this setting
 fall back to `X86_64` so nothing changes silently. When switching an existing service to ARM,
 run the CI build right after `up` so an ARM image exists before tasks roll
 (`devops.environment_type` / `environment_image` can override the derivation for staged migration).
