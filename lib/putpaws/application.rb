@@ -14,6 +14,17 @@ module Putpaws
       super
     end
 
+    # Mistakes in settings or parameters (Putpaws::Error) are answered with
+    # the message alone; a backtrace would only bury it. --trace shows it.
+    def display_error_message(ex)
+      if ex.is_a?(Putpaws::Error) && !options.trace
+        trace "#{name} aborted!"
+        trace ex.message
+      else
+        super
+      end
+    end
+
     def find_rakefile_location
       putpawsfile = File.expand_path(File.join(File.dirname(__FILE__), "..", "Putpawsfile"))
       if (location = super).nil?

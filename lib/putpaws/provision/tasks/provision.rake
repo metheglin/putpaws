@@ -8,7 +8,7 @@ namespace :provision do
     prompt = Putpaws::Prompt.safe
     util = Putpaws::Provision::Util
 
-    service_name = ENV['service'] || prompt.ask("Application name (Ex: awesome-api-staging):") do |q|
+    service_name = ENV['service'] || prompt.ask("Service name, which becomes the environment name (Ex: awesome-api-staging):") do |q|
       q.required(true)
       q.validate(/\A[a-z0-9][a-z0-9\-]*\z/, "lowercase letters, numbers and hyphens only")
     end

@@ -104,6 +104,19 @@ module Putpaws
         iam_client.delete_policy_version(policy_arn: policy_arn(profile), version_id: oldest.version_id)
       end
 
+      # Scheduler roles of the targets which the launches of this environment
+      # refer to. Falls back to the role name pattern of putpaws provisioning.
+      def scheduler_roles
+        require "putpaws/infra_target_config"
+        path_prefix = app.path_prefix || Putpaws::ConfigFile.root
+        roles = app.launches.map{|launch|
+          target = Putpaws::InfraTargetConfig.find(launch.target, path_prefix: path_prefix)
+          target && target.scheduler_role
+        }.compact.uniq
+        return "arn:aws:iam::#{account_id}:role/#{app.name}-*" if roles.empty?
+        roles.one? ? roles.first : roles
+      end
+
       def statements_for(group)
         case group
         when 'attach'
@@ -183,15 +196,15 @@ module Putpaws
              ]},
           ]
         when 'scheduler'
-          scheduler_role = (app.target && app.target.scheduler_role) ||
-            "arn:aws:iam::#{account_id}:role/#{app.name}-*"
+          scheduler_role = scheduler_roles
           [
             {Sid: 'ScheduleList', Effect: 'Allow',
              Action: %w[scheduler:ListSchedules],
              Resource: '*'},
             {Sid: 'ScheduleManage', Effect: 'Allow',
              Action: %w[scheduler:GetSchedule scheduler:CreateSchedule scheduler:UpdateSchedule],
-             Resource: "arn:aws:scheduler:#{region}:#{account_id}:schedule/default/*"},
+             # Schedules are deployed as <environment>-<schedule>.
+             Resource: "arn:aws:scheduler:#{region}:#{account_id}:schedule/default/#{app.name}-*"},
             {Sid: 'SchedulePassRole', Effect: 'Allow',
              Action: %w[iam:PassRole],
              Resource: scheduler_role},

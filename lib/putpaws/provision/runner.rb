@@ -152,7 +152,9 @@ module Putpaws
         apply_resources(service_resources)
         state.mark_step!(:service, 'done')
 
-        ConfigWriter.new(config: config, state: state, prompt: prompt, io: io).apply!
+        writer = ConfigWriter.new(config: config, state: state, prompt: prompt, io: io)
+        writer.apply!
+        writer.notify_legacy
 
         if missing_devops_requirements.any?
           io.puts "[stop point] Devops step is not ready. Fill in: #{missing_devops_requirements.join(', ')}"
@@ -166,7 +168,7 @@ module Putpaws
         ConfigWriter.new(config: config, state: state, prompt: prompt, io: io).apply!
 
         io.puts "All steps completed."
-        io.puts "Verify with: bundle exec putpaws #{config.service_name} ecs:run cmd='echo ok' wait=true"
+        io.puts "Verify with: bundle exec putpaws #{config.service_name} ecs:run launch=#{config.preset.service_task_definition} cmd='echo ok' wait=true"
       end
 
       private

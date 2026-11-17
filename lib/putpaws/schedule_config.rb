@@ -1,54 +1,88 @@
-require 'json'
-require 'pathname'
-require 'putpaws/infra_network_config'
-require 'putpaws/infra_target_config'
+require 'putpaws/config_file'
+require 'putpaws/launch_config'
+require 'putpaws/launch_resolver'
 
-class Putpaws::ScheduleConfig < Struct.new(
-  :name, :region, :network, :target, :command, :args,
-  keyword_init: true)
-  def self.load(path_prefix: '.putpaws')
-    @schedule_data ||= begin
-      path = Pathname.new(path_prefix).join("schedule.json").to_s
-      data = File.exist?(path) ?
-        JSON.parse(File.read(path), symbolize_names: true).to_h :
-        {}
-    end
+# A schedule (.putpaws/<environment>/schedule.json): a launch of the same
+# environment plus when to run it.
+#
+#   "nightly-seed": {
+#     "launch": "seed",
+#     "schedule_expression": "cron(0 18 * * ? *)",
+#     "schedule_expression_timezone": "Asia/Tokyo"
+#   }
+#
+# Launch fields written here (command / env / cpu ...) override the launch
+# for this schedule only. Everything else is passed to EventBridge Scheduler
+# (create_schedule / update_schedule) as it is.
+class Putpaws::ScheduleConfig
+  FILENAME = 'schedule.json'
+  OVERRIDE_FIELDS = Putpaws::LaunchConfig::FIELDS - %i[target network]
+  # What a schedule held in 0.1.x. They come from the launch / the environment now.
+  REMOVED_KEYS = %i[target network region]
+
+  attr_reader :application, :name, :launch, :overrides, :args
+
+  def self.path(application)
+    application.dir.join(FILENAME)
   end
 
-  def self.build_args(name, config_args)
-    region = config_args.delete(:region)
-    network = config_args.delete(:network)
-    target = config_args.delete(:target)
-    command = config_args.delete(:command)
-    {
-      name: name.to_s, 
-      region: region, 
-      network: network, 
-      target: target, 
-      command: command,
-    }.merge(args: config_args)
+  def self.load(application)
+    Putpaws::ConfigFile.read(path(application))
   end
 
-  def self.all
-    load.map{|k,v|
-      new(build_args(k, v))
-    }
+  def self.all(application)
+    load(application).map{|name, data| new(application: application, name: name, data: data)}
   end
 
-  def self.find(name)
-    schedule_data = load
-    data = schedule_data[name.to_sym]
+  def self.find(application, name)
+    data = load(application)[name.to_sym]
     return nil unless data
-    new(build_args(name, data))
+    new(application: application, name: name, data: data)
   end
 
-  def network
-    return nil unless self[:network]
-    @network ||= Putpaws::InfraNetworkConfig.find(self[:network])
+  def self.find!(application, name)
+    find(application, name) or raise Putpaws::ConfigError,
+      "Schedule not found: #{name} (#{path(application)})\n" +
+      "Available: #{load(application).keys.join(', ')}"
   end
 
-  def target
-    return nil unless self[:target]
-    @target ||= Putpaws::InfraTargetConfig.find(self[:target])
+  def initialize(application:, name:, data:)
+    @application = application
+    @name = name.to_s
+    context = "schedule `#{@name}` (#{self.class.path(application)})"
+    raise Putpaws::ConfigError, "#{context} must be a JSON object" unless data.is_a?(Hash)
+
+    data = data.dup
+    removed = data.keys & REMOVED_KEYS
+    unless removed.empty?
+      raise Putpaws::ConfigError,
+        "#{context} has #{removed.map{|k| "`#{k}`"}.join(', ')}, which a schedule no longer holds.\n" +
+        "Name a launch of this environment instead: \"launch\": \"<name in launch.json>\""
+    end
+    @launch = data.delete(:launch)
+    if Putpaws::LaunchConfig.blank?(@launch)
+      raise Putpaws::ConfigError, "#{context} needs `launch` (a name in launch.json of the same environment)"
+    end
+    @overrides = Putpaws::LaunchConfig.normalize(
+      data.slice(*OVERRIDE_FIELDS), context: context
+    )
+    @args = data.reject{|k, _| OVERRIDE_FIELDS.include?(k)}
+  end
+
+  # Unique within the account and region: <environment>-<schedule>.
+  def aws_name
+    "#{application.name}-#{name}"
+  end
+
+  def launch_config
+    Putpaws::LaunchConfig.find!(application, launch)
+  end
+
+  def resolve
+    Putpaws::LaunchResolver.resolve(
+      application: application,
+      launch: launch_config,
+      overrides: [overrides],
+    )
   end
 end

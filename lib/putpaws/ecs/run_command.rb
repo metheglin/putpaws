@@ -1,6 +1,7 @@
 require 'aws-sdk-ecs'
 
 module Putpaws::Ecs
+  # Starts a temporary task from a resolved launch (Putpaws::ResolvedLaunch).
   class RunCommand
     DEFAULT_TTL = '30m'
     SECONDS = {
@@ -8,19 +9,6 @@ module Putpaws::Ecs
       'm' => 60,
       'h' => 60 * 60,
     }
-
-    def self.config(config)
-      unless config.network && config.target
-        raise "Please set `network` and `target` at .putpaws/application.json\n" +
-          "They refer to `network` and `target` sections at .putpaws/infra.json\n" +
-          "(Ex) \"network\": \"awesome-private-staging\", \"target\": \"awesome-staging\""
-      end
-      new(
-        region: config.ecs_region || config.region,
-        network: config.network,
-        target: config.target,
-      )
-    end
 
     # "45" and "45m" mean 45 minutes. "90s" and "2h" are also acceptable.
     def self.parse_ttl(ut)
@@ -30,57 +18,47 @@ module Putpaws::Ecs
       number.to_i * SECONDS[unit || 'm']
     end
 
-    attr_reader :ecs_client
-    attr_reader :region, :network, :target
-    def initialize(region:, network:, target:)
-      @ecs_client = Aws::ECS::Client.new({region: region})
-      @region = region
-      @network = network
-      @target = target
+    attr_reader :launch
+    def initialize(launch, ecs_client: nil)
+      @launch = launch
+      @ecs_client = ecs_client
+    end
+
+    def ecs_client
+      @ecs_client ||= Aws::ECS::Client.new({region: region})
+    end
+
+    def region
+      launch.region
     end
 
     def cluster_name
-      target.cluster.split('/').last
+      launch.cluster_name
     end
 
     def container_name
-      target.container_name || 'app'
+      launch.container_name
     end
 
-    # Launch a temporary task whose main process is overridden with the given
-    # command, so that the task terminates itself when the command finishes.
-    # started_by and group are set so that temporary tasks are identifiable.
-    # cpu/memory override the task-level size for this launch only
-    # (must be a valid Fargate combination).
-    def run_ecs_task(command:, started_by:, group:, container: nil, cpu: nil, memory: nil)
-      overrides = {
-        container_overrides: [
-          {
-            name: container || container_name,
-            command: ['/bin/sh', '-c', command],
-          }
-        ]
-      }
-      overrides[:cpu] = cpu.to_s unless cpu.to_s.strip.empty?
-      overrides[:memory] = memory.to_s unless memory.to_s.strip.empty?
-
-      res = ecs_client.run_task({
-        cluster: target.cluster,
-        task_definition: target.task_definition,
+    # Parameters of ECS RunTask. started_by and group are set so that
+    # temporary tasks are identifiable.
+    def run_task_params(started_by:, group:)
+      params = {
+        cluster: launch.cluster,
+        task_definition: launch.task_definition,
         count: 1,
-        launch_type: 'FARGATE',
         enable_execute_command: true,
         started_by: started_by,
         group: group,
-        network_configuration: {
-          awsvpc_configuration: {
-            subnets: network.subnets,
-            security_groups: network.security_groups,
-            assign_public_ip: network.assign_public_ip,
-          }
-        },
-        overrides: overrides,
-      })
+        network_configuration: launch.network_configuration,
+      }.merge(launch.placement)
+      overrides = launch.task_overrides
+      params[:overrides] = overrides unless overrides.empty?
+      params
+    end
+
+    def run_ecs_task(started_by:, group:)
+      res = ecs_client.run_task(run_task_params(started_by: started_by, group: group))
       failure = res.failures.first
       raise "Failed to run task: #{failure.reason} #{failure.detail}" if failure
       res.tasks.first
@@ -89,7 +67,7 @@ module Putpaws::Ecs
     def wait_until_attachable(task_arn, timeout: 600, interval: 5)
       deadline = Time.now + timeout
       loop do
-        res = ecs_client.describe_tasks(cluster: target.cluster, tasks: [task_arn])
+        res = ecs_client.describe_tasks(cluster: launch.cluster, tasks: [task_arn])
         task = res.tasks.first
         if task.nil? || task.last_status == 'STOPPED'
           raise "Task was stopped: #{task && task.stopped_reason}"
@@ -105,7 +83,7 @@ module Putpaws::Ecs
     def wait_until_stopped(task_arn, timeout: 3600, interval: 10)
       deadline = Time.now + timeout
       loop do
-        res = ecs_client.describe_tasks(cluster: target.cluster, tasks: [task_arn])
+        res = ecs_client.describe_tasks(cluster: launch.cluster, tasks: [task_arn])
         task = res.tasks.first
         raise "Task not found: #{task_arn}" unless task
         return task if task.last_status == 'STOPPED'
@@ -115,7 +93,7 @@ module Putpaws::Ecs
     end
 
     def stop_ecs_task(task_arn, reason: 'Stopped by putpaws')
-      ecs_client.stop_task(cluster: target.cluster, task: task_arn, reason: reason)
+      ecs_client.stop_task(cluster: launch.cluster, task: task_arn, reason: reason)
     end
   end
 end
